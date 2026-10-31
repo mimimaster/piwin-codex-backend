@@ -1,0 +1,32 @@
+{
+  "name": "piwin-codex-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Independent piwin sessionBackend for local Codex app-server over stdio.",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22.23.4"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "build": "node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.9"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "piwin": {
+    "sessionBackendId": "codex",
+    "appServerTransport": "stdio",
+    "schema": "app-server v2"
+  }
+}
