@@ -103,3 +103,80 @@ describe('codex plugin fixtures', () => {
     expect(written.at(-1)).toMatchObject({ result: { state: 'not-installed' } });
   });
 });
+
+describe('codex load identity', () => {
+  it('session/load without a stored thread id fails instead of thread/start', async () => {
+    const written: Frame[] = [];
+    const io = createCallbackIo((frame) => written.push(frame), new Map());
+    const calls: string[] = [];
+    const appServer: AppServerPort = {
+      async request(method) {
+        calls.push(method);
+        if (method === 'initialize') return { protocol: 'v2' };
+        throw new Error(`unexpected ${method}`);
+      },
+      notify() {},
+      onNotification() { return () => undefined; },
+      onRequest() { return () => undefined; },
+    };
+    const plugin = new CodexPlugin({
+      io, appServer, pathExists: (path) => path === '/opt/codex', env: { PATH: '' },
+    });
+    await plugin.handle(req('plugin/initialize', {
+      agentId: 'codex', pluginRevision: 'rev', hostProtocolVersion: 1,
+      runtime: { binaryPath: '/opt/codex' }, hostCapabilities: {},
+    }));
+    await plugin.handle(req('session/load', { cwd: '/work', binding: { agentId: 'codex' } }, sessionScope));
+    expect(written.at(-1)).toMatchObject({ ok: false, error: { message: 'native session id required' } });
+    expect(calls).not.toContain('thread/start');
+  });
+});
+
+describe('codex load history', () => {
+  it('session/load reconstructs rollout history before thread/resume', async () => {
+    const written: Frame[] = [];
+    const io = createCallbackIo((frame) => written.push(frame), new Map());
+    const calls: string[] = [];
+    const path = '/hist/sessions/2026/10/31/rollout-2026-10-31T00-00-00-thr_saved.jsonl';
+    const jsonl = [
+      JSON.stringify({
+        type: 'response_item',
+        payload: { type: 'message', id: 'msg_user', role: 'user', content: [{ type: 'input_text', text: 'hello from codex history' }] },
+      }),
+      JSON.stringify({
+        type: 'response_item',
+        payload: { type: 'message', id: 'msg_asst', role: 'assistant', content: [{ type: 'output_text', text: 'prior codex reply' }] },
+      }),
+    ].join('\n');
+    const appServer: AppServerPort = {
+      async request(method) {
+        calls.push(method);
+        if (method === 'initialize') return { protocol: 'v2' };
+        if (method === 'thread/resume') return { thread: { id: 'thr_saved' } };
+        throw new Error(`unexpected ${method}`);
+      },
+      notify() {},
+      onNotification() { return () => undefined; },
+      onRequest() { return () => undefined; },
+    };
+    const plugin = new CodexPlugin({
+      io, appServer, pathExists: (path) => path === '/opt/codex', env: { PATH: '' },
+      historyRoot: '/hist',
+      listHistoryFiles: () => [path],
+      readHistoryFile: (candidate) => candidate === path ? jsonl : undefined,
+    });
+    await plugin.handle(req('plugin/initialize', {
+      agentId: 'codex', pluginRevision: 'rev', hostProtocolVersion: 1,
+      runtime: { binaryPath: '/opt/codex' }, hostCapabilities: {},
+    }));
+    await plugin.handle(req('session/load', {
+      cwd: '/work', binding: { agentId: 'codex', backendSessionId: 'thr_saved' },
+    }, sessionScope));
+    const loaded = written.at(-1) as Extract<Frame, { kind: 'response'; ok: true }>;
+    expect(loaded.ok).toBe(true);
+    expect(JSON.stringify(loaded.result)).toContain('hello from codex history');
+    expect(JSON.stringify(loaded.result)).toContain('prior codex reply');
+    expect(calls).toContain('thread/resume');
+    expect(calls).not.toContain('thread/start');
+  });
+});

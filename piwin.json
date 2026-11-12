@@ -4,6 +4,10 @@
     "id": "codex",
     "name": "Codex",
     "description": "Local Codex app-server session backend for piwin",
+    "icon": {
+      "kind": "brand",
+      "id": "codex"
+    },
     "version": "0.1.0",
     "minHostVersion": "0.0.0",
     "protocol": "piwin-agent-stdio",
@@ -14,16 +18,19 @@
       "win32",
       "linux"
     ],
-    "verifiedCliVersions": [],
+    "verifiedCliVersions": [
+      "0.114.0",
+      "0.167.0"
+    ],
     "helpUrl": "https://github.com/openai/codex",
     "artifact": {
       "format": "node-esm",
       "entrypoint": "dist/agent.mjs",
-      "sha256": "7d7df948dbfc924d15c9195352401d6ad621c56243887cde2534e3531138ea81",
-      "byteSize": 24092
+      "sha256": "f67678a3cf6684e66f08a2f0f056acb90067a41c7983a3a2937573dde83407fb",
+      "byteSize": 44085
     },
     "compatibleRevisions": [],
-    "unversionedBindingCompatible": false,
+    "unversionedBindingCompatible": true,
     "outputDirectories": [
       {
         "id": "images",

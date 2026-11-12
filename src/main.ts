@@ -15,7 +15,10 @@ const plugin = new CodexPlugin({
   probeBinary(binaryPath) {
     return new Promise((resolve) => {
       const child = spawn(binaryPath, ['--version'], { stdio: ['ignore', 'pipe', 'pipe'] });
+      let stdout = '';
       let stderr = '';
+      child.stdout.setEncoding('utf8');
+      child.stdout.on('data', (chunk: string) => { stdout += chunk; });
       child.stderr.setEncoding('utf8');
       child.stderr.on('data', (chunk: string) => { stderr += chunk; });
       child.on('error', (error) => {
@@ -24,7 +27,10 @@ const plugin = new CodexPlugin({
       });
       child.on('close', (code) => {
         if (code !== 0 || isUnusableCodexProbe({ stderr })) resolve({ ok: false });
-        else resolve({ ok: true, version: 'unknown' });
+        else {
+          const match = /(\d+\.\d+\.\d+)/.exec(`${stdout}\n${stderr}`);
+          resolve({ ok: true, version: match?.[1] ?? 'unknown' });
+        }
       });
     });
   },
